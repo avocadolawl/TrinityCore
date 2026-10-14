@@ -158,6 +158,7 @@ bool handleArgs(int argc, char** argv,
 {
     char* param = nullptr;
     [[maybe_unused]] bool allowDebug = false;
+    bool playerAgent = false;
     for (int i = 1; i < argc; ++i)
     {
         if (strcmp(argv[i], "--maxAngle") == 0)
@@ -183,6 +184,32 @@ bool handleArgs(int argc, char** argv,
                 maxAngleNotSteep = maxangle;
             else
                 TC_LOG_ERROR("tool.mmapgen.commandline", "invalid option for '--maxAngleNotSteep', using default");
+        }
+        else if (strcmp(argv[i], "--walkableRadius") == 0 || strcmp(argv[i], "--walkableHeight") == 0
+            || strcmp(argv[i], "--walkableClimb") == 0)
+        {
+            char const* name = argv[i];
+            param = argv[++i];
+            if (!param)
+                return false;
+
+            float yards = float(atof(param));
+            if (yards < 0.f || yards > 10.f)
+            {
+                TC_LOG_ERROR("tool.mmapgen.commandline", "invalid option for '{}' (yards, 0 to 10), using default", name);
+                continue;
+            }
+            MMAP::TileBuilder::AgentOverrides& agent = MMAP::TileBuilder::Agent;
+            if (strcmp(name, "--walkableRadius") == 0)
+                agent.Radius = yards;
+            else if (strcmp(name, "--walkableHeight") == 0)
+                agent.Height = yards;
+            else
+                agent.Climb = yards;
+        }
+        else if (strcmp(argv[i], "--player") == 0)
+        {
+            playerAgent = true;
         }
         else if (strcmp(argv[i], "--threads") == 0)
         {
@@ -349,6 +376,23 @@ bool handleArgs(int argc, char** argv,
         }
     }
 
+    // --player: a player-sized agent (0.8 yd radius, 2.1 yd tall, steps up 0.8 yd, 50 degree slopes)
+    // instead of TrinityCore's NPC agent. Values given explicitly win.
+    if (playerAgent)
+    {
+        MMAP::TileBuilder::AgentOverrides& agent = MMAP::TileBuilder::Agent;
+        if (!agent.Radius)
+            agent.Radius = 0.8f;
+        if (!agent.Height)
+            agent.Height = 2.1f;
+        if (!agent.Climb)
+            agent.Climb = 0.8f;
+        if (!maxAngle)
+            maxAngle = 50.f;
+        if (!maxAngleNotSteep)
+            maxAngleNotSteep = *maxAngle;
+    }
+
 #if !defined(NDEBUG)
     if (!allowDebug)
     {
@@ -467,6 +511,16 @@ int main(int argc, char** argv)
 
     if (!validParam)
         return silent ? -1 : finish("You have specified invalid parameters", -1);
+
+    {
+        MMAP::TileBuilder::AgentOverrides const& agent = MMAP::TileBuilder::Agent;
+        if (agent.Radius || agent.Height || agent.Climb || maxAngle)
+            TC_LOG_INFO("tool.mmapgen", "Agent: radius {} yd, height {} yd, climb {} yd, max slope {} degrees",
+                agent.Radius ? Trinity::StringFormat("{:.2f}", *agent.Radius) : std::string("default"),
+                agent.Height ? Trinity::StringFormat("{:.2f}", *agent.Height) : std::string("default"),
+                agent.Climb ? Trinity::StringFormat("{:.2f}", *agent.Climb) : std::string("default"),
+                maxAngle ? Trinity::StringFormat("{:.0f}", *maxAngle) : std::string("default"));
+    }
 
     if (mapnum == -1 && debugOutput)
     {

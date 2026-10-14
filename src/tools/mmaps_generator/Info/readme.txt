@@ -26,6 +26,19 @@ R"(Generator command line args
 
                                     float between 45 and 90 degrees (default 55)
 
+--walkableRadius    [#]             Agent radius in yards: paths keep this far from walls
+                                    (default 0.53, the NPC agent)
+
+--walkableHeight    [#]             Agent height in yards: no paths under lower ceilings
+                                    (default 1.6)
+
+--walkableClimb     [#]             Highest step in yards the agent walks up; fences and low
+                                    walls above it block paths (default 1.6, which walks over
+                                    most fences)
+
+--player            []              Player-sized agent: radius 0.8, height 2.1, climb 0.8,
+                                    max angle 50. Options given explicitly win.
+
 --skipLiquid        [true|false]    extract liquid data for maps
 
                                     false: include liquid data (default)

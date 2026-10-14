@@ -23,6 +23,8 @@
 #include "StringFormat.h"
 #include "VMapManager.h"
 #include <DetourNavMeshBuilder.h>
+#include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -67,6 +69,8 @@ namespace MMAP
         int VERTEX_PER_TILE;
         int TILES_PER_MAP;
     };
+
+    TileBuilder::AgentOverrides TileBuilder::Agent;
 
     TileBuilder::TileBuilder(boost::filesystem::path const& inputDirectory, boost::filesystem::path const& outputDirectory,
         Optional<float> maxWalkableAngle, Optional<float> maxWalkableAngleNotSteep,
@@ -536,6 +540,18 @@ namespace MMAP
         // a value >= 3|6 allows npcs to walk over some fences
         // a value >= 4|8 allows npcs to walk over all fences
         config.walkableClimb = m_bigBaseUnit ? 3 : 6;
+
+        // Agent overrides (yards -> cells). A player needs a wider, taller agent that only steps
+        // up small ledges: the defaults let paths hug walls and step over fences.
+        auto toCells = [&](float yards) { return std::max(0, int(std::lround(yards / tileConfig.BASE_UNIT_DIM))); };
+        if (Agent.Radius)
+            config.walkableRadius = toCells(*Agent.Radius);
+        if (Agent.Height)
+            config.walkableHeight = std::max(1, toCells(*Agent.Height));
+        if (Agent.Climb)
+            config.walkableClimb = std::min(toCells(*Agent.Climb), config.walkableHeight - 1);
+        config.borderSize = config.walkableRadius + 3;
+
         config.minRegionArea = rcSqr(60);
         config.mergeRegionArea = rcSqr(50);
         config.maxSimplificationError = 1.8f;           // eliminates most jagged edges (tiny polygons)

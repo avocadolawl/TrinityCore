@@ -79,6 +79,16 @@ public:
 
     rcConfig GetMapSpecificConfig(uint32 mapID, float const (&bmin)[3], float const (&bmax)[3], TileConfig const& tileConfig) const;
 
+    // Agent size overrides in yards, set by mmaps_generator (--walkableRadius, --walkableHeight,
+    // --walkableClimb, --player). Unset keeps the defaults above, which are sized for server NPCs.
+    struct AgentOverrides
+    {
+        Optional<float> Radius;
+        Optional<float> Height;
+        Optional<float> Climb;
+    };
+    static AgentOverrides Agent;
+
     virtual std::string GetProgressText() const;
 
     virtual void OnTileDone() { }
