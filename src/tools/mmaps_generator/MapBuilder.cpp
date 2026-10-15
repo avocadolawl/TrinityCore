@@ -195,13 +195,16 @@ namespace MMAP
         while (fgets(buf, 512, fp.get()))
         {
             OffMeshData offMesh;
-            int32 scanned = sscanf(buf, "%u %u,%u (%f %f %f) (%f %f %f) %f %hhu %hu", &offMesh.MapId, &offMesh.TileX, &offMesh.TileY,
+            // Optional 13th field: 1 = both ways (the default), 0 = one way, From to To (a drop down a ledge).
+            uint8 bidirectional = 1;
+            int32 scanned = sscanf(buf, "%u %u,%u (%f %f %f) (%f %f %f) %f %hhu %hu %hhu", &offMesh.MapId, &offMesh.TileX, &offMesh.TileY,
                 &offMesh.From[0], &offMesh.From[1], &offMesh.From[2], &offMesh.To[0], &offMesh.To[1], &offMesh.To[2],
-                &offMesh.Radius, &offMesh.AreaId, reinterpret_cast<std::underlying_type_t<NavTerrainFlag>*>(&offMesh.Flags));
+                &offMesh.Radius, &offMesh.AreaId, reinterpret_cast<std::underlying_type_t<NavTerrainFlag>*>(&offMesh.Flags),
+                &bidirectional);
             if (scanned < 10)
                 continue;
 
-            offMesh.ConnectionFlags = OFFMESH_CONNECTION_FLAG_BIDIRECTIONAL;
+            offMesh.ConnectionFlags = (scanned < 13 || bidirectional) ? OFFMESH_CONNECTION_FLAG_BIDIRECTIONAL : OffMeshConnectionFlag(0);
             if (scanned < 12)
                 offMesh.Flags = NAV_GROUND;
 
